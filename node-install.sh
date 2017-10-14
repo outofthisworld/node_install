@@ -7,57 +7,59 @@
 ##########################################
 
 
+
+
 NVM_LINK="https://raw.githubusercontent.com/creationix/nvm/v0.33.5/install.sh"
 
-
-#NODE VERSION
-NODE_VERSION="${1:-6}"
-
-if ! [[ $NODE_VERSION  =~ ^[0-9]+.?[0-9]*.?[0-9]*$ ]]
-then
-	echo "Invalid node version specified, must be a number in format [x[x.x..]] e.g (6),(6.2),(6.3.2)"
-	exit
-fi
-
-## FIRST, CHECK TO SEE IF WE HAVE CURL OR WGET ##
-
-CURL_LOCATION="$(which curl > /dev/null 2>&1)"
-WGET_LOCATION="$(which wget > /dev/null 2>&1)"
-
-
-## IF WE DONT HAVE CURL OR WGET.. ATTEMPT TO GET IT USING A PACKAGE MANAGER
-if ! [ -e $CURL_LOCATION ] && ! [ -e $WGET_LOCATION ]
-then
-	which apt-get && apt-get install curl ||
-        which yum && yum install curl ||
-	which pacman && pacman install curl ||
-	which port && port selfupdate && port install curl ||
-	which brew && brew update && brew install curl || 
-        echo "Could not find wget and no suitable package manager found to install curl, please install curl/wget manually" && exit
-fi
-
-##WE HAVE CURL OR WGET.. USE TO DOWNLOAD NVM
-which curl && curl -o- ${NVM_LINK} 2> /dev/null | bash || which wget && wget -qO- ${NVM_LINK} 2> /dev/null | bash && (
-       
-	 ## CREATE A SYMBOLIC LINK TO NVM ##
+install_node_via_nvm(){
+    ## CREATE A SYMBOLIC LINK TO NVM ##
 	sudo ln -s "${NVM_DIR}/nvm.sh" "/usr/local/bin" || sudo ln -s "${NVM_DIR}/nvm.sh" "/usr/bin" || echo "Failed to create symbolic link for nvm"
         
 	## SOURCE THE NVM SCRIPT ##
 	source "${NVM_DIR}/nvm.sh"
-	NVM_VERS="$(nvm --version)"
-	echo "nvm vers was ${NVM_VERS} node vers is ${NODE_VERSION}"
+	local NVM_VERS="$(nvm --version)"
 	
 	#CHECK NVM INSTALLED CORRECTLY by checking nvm --version
-	if [ -n $NVM_VERS ] 
+	if [ -n ${NVM_VERS:-''} ] 
 	then
-		echo "Succesfully installed ${NVM_VERS}"
-		nvm install ${NODE_VERSION} && nvm use ${NODE_VERSION} && (
-			 echo "Succesfully installed nvm at location ${NVM_DIR} using node ${NODE_VERSION}"
-	        ) || echo "NVM install/use failed..."
+		return 0 
 	else
-	   echo "Unknown error"
+	   return 1
 	fi
-) || echo "Failed to install nvm from ${NVM_LINK}, please check install script is still available"
+}
+
+install_node_version(){
+    source "${NVM_DIR}/nvm.sh"
+    if [ $(nvm ls ${1:-6} | grep N/A) ]; then
+        nvm install ${1:-6} && nvm use ${1:-6}
+    else
+        nvm use ${1:-6} 
+    fi
+        return $?
+}
+
+if ! [ $(which curl) ] && ! [ $(which wget) ]; then
+    ## attempt to download curl or wget
+    which apt-get && apt-get install curl ||
+    which yum && yum install curl ||
+	which pacman && pacman install curl ||
+	which port && port selfupdate && port install curl ||
+	which brew && brew update && brew install curl || 
+    echo "Could not find wget and no suitable package manager found to install curl, please install curl/wget manually" && exit
+fi
+
+if ! [ -d "${NVM_DIR}" ] || ! [ -f "${NVM_DIR}/install.sh" ]; then
+    which curl && curl -o- ${NVM_LINK} 2> /dev/null | bash || which wget && wget -qO- ${NVM_LINK} 2> /dev/null | bash &&
+    install_node_via_nvm && echo "succesfully installed nvm via curl..installing node" || (echo "error installing nvm via curl" && exit) && install_node_version $1 && 
+    echo "succesfully installed node verion ${1}" || echo "failed to instal node version ${1}"
+else
+    echo "NVM is already installed on this machine"
+    install_node_version $1
+fi
+
+exit
+
+
 
 
 
