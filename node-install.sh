@@ -6,9 +6,6 @@
 #                                        #    
 ##########################################
 
-
-
-
 NVM_LINK="https://raw.githubusercontent.com/creationix/nvm/v0.33.5/install.sh"
 
 install_node_via_nvm(){
@@ -35,9 +32,15 @@ install_node_version(){
     else
         nvm use ${1:-6} 
     fi
-        return $?
+    return $?
 }
 
+ if ! [[ $NODE_VERSION  =~ ^[0-9]+.?[0-9]*.?[0-9]*$ ]]
+ then
+ 	echo "Invalid node version specified, must be a number in format [x[x.x..]] e.g (6),(6.2),(6.3.2)"
+ 	exit
+ fi
+ 
 if ! [ $(which curl) ] && ! [ $(which wget) ]; then
     ## attempt to download curl or wget
     which apt-get && apt-get install curl ||
@@ -58,8 +61,3 @@ else
 fi
 
 exit
-
-
-
-
-
